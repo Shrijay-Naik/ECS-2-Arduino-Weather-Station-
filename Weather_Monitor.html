@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Weather Station Dashboard</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <style>
+    body {
+      font-family: Arial;
+      text-align: center;
+      background: #111;
+      color: #fff;
+    }
+
+    .top-bar {
+      margin: 10px;
+      font-size: 18px;
+    }
+
+    .container {
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .card {
+      margin: 15px;
+      padding: 20px;
+      border-radius: 15px;
+      background: #222;
+      width: 200px;
+      box-shadow: 0 0 10px #0ff;
+    }
+
+    .value {
+      font-size: 22px;
+      color: #0ff;
+      font-weight: bold;
+    }
+
+    button {
+      margin-top: 15px;
+      padding: 10px 20px;
+      border-radius: 10px;
+      border: none;
+      background: #0ff;
+      color: #000;
+      cursor: pointer;
+    }
+
+    #alertBox {
+      margin: 15px auto;
+      padding: 10px;
+      width: 60%;
+      border-radius: 10px;
+      font-weight: bold;
+      display: none;
+    }
+
+    .history {
+      margin-top: 20px;
+      max-height: 200px;
+      overflow-y: auto;
+      border: 1px solid #0ff;
+      width: 80%;
+      margin-left: auto;
+      margin-right: auto;
+      padding: 10px;
+      border-radius: 10px;
+      text-align: left;
+    }
+
+    .entry {
+      padding: 5px;
+      border-bottom: 1px solid #333;
+    }
+
+    canvas {
+      margin-top: 20px;
+      background: #222;
+      padding: 10px;
+      border-radius: 10px;
+    }
+  </style>
+</head>
+
+<body>
+
+<h1>Weather Station Dashboard</h1>
+
+<div class="top-bar">
+  Location: Chennai |
+  Time: <span id="time"></span>
+</div>
+
+<div id="alertBox"></div>
+
+<div class="container">
+  <div class="card">
+    <h3>Temperature</h3>
+    <div class="value" id="temp">-- °C</div>
+    <div id="tempMinMax"></div>
+  </div>
+
+  <div class="card">
+    <h3>Humidity</h3>
+    <div class="value" id="hum">-- %</div>
+    <div id="humMinMax"></div>
+  </div>
+
+  <div class="card">
+    <h3>Pressure</h3>
+    <div class="value" id="pres">-- hPa</div>
+    <div id="presMinMax"></div>
+  </div>
+
+  <div class="card">
+    <h3>Light</h3>
+    <div class="value" id="light">-- lux</div>
+    <div id="lightMinMax"></div>
+  </div>
+</div>
+
+<button onclick="getValues()">Find Parameters</button>
+
+<canvas id="chart" width="600" height="300"></canvas>
+
+<h2>History</h2>
+<div class="history" id="historyBox"></div>
+
+<script>
+let labels = [];
+let tempData = [];
+let humData = [];
+
+let tempMin=999, tempMax=0;
+let humMin=999, humMax=0;
+let presMin=9999, presMax=0;
+let lightMin=9999, lightMax=0;
+
+function updateTime() {
+  let now = new Date();
+  document.getElementById("time").innerHTML = now.toLocaleTimeString();
+}
+setInterval(updateTime, 1000);
+
+let ctx = document.getElementById("chart").getContext("2d");
+
+let chart = new Chart(ctx, {
+  type: 'line',
+  data: {
+    labels: labels,
+    datasets: [
+      { label: "Temperature", data: tempData, borderWidth: 2 },
+      { label: "Humidity", data: humData, borderWidth: 2 }
+    ]
+  }
+});
+
+function showAlert(message, type) {
+  let box = document.getElementById("alertBox");
+  box.style.display = "block";
+  box.innerHTML = message;
+
+  if(type === "danger") box.style.background = "red";
+  else if(type === "warning") box.style.background = "orange";
+  else box.style.background = "green";
+}
+
+function getValues() {
+
+  let temperature = Math.floor(Math.random() * 10) + 25;
+  let humidity = Math.floor(Math.random() * 20) + 50;
+  let pressure = Math.floor(Math.random() * 40) + 990;
+  let light = Math.floor(Math.random() * 400);
+
+  document.getElementById("temp").innerHTML = temperature + " °C";
+  document.getElementById("hum").innerHTML = humidity + " %";
+  document.getElementById("pres").innerHTML = pressure + " hPa";
+  document.getElementById("light").innerHTML = light + " lux";
+
+  // --- MIN MAX ---
+  tempMin = Math.min(tempMin, temperature);
+  tempMax = Math.max(tempMax, temperature);
+
+  humMin = Math.min(humMin, humidity);
+  humMax = Math.max(humMax, humidity);
+
+  presMin = Math.min(presMin, pressure);
+  presMax = Math.max(presMax, pressure);
+
+  lightMin = Math.min(lightMin, light);
+  lightMax = Math.max(lightMax, light);
+
+  document.getElementById("tempMinMax").innerHTML = "Min:"+tempMin+" Max:"+tempMax;
+  document.getElementById("humMinMax").innerHTML = "Min:"+humMin+" Max:"+humMax;
+  document.getElementById("presMinMax").innerHTML = "Min:"+presMin+" Max:"+presMax;
+  document.getElementById("lightMinMax").innerHTML = "Min:"+lightMin+" Max:"+lightMax;
+
+  // --- GRAPH ---
+  let time = new Date().toLocaleTimeString();
+  labels.push(time);
+  tempData.push(temperature);
+  humData.push(humidity);
+
+  if(labels.length > 10) {
+    labels.shift();
+    tempData.shift();
+    humData.shift();
+  }
+
+  chart.update();
+
+  // --- HISTORY ---
+  let entry = `<div class="entry">
+    [${time}] T:${temperature}°C | H:${humidity}% | P:${pressure}hPa | L:${light}lux
+  </div>`;
+
+  document.getElementById("historyBox").innerHTML =
+    entry + document.getElementById("historyBox").innerHTML;
+
+  // --- ALERT ---
+  if(temperature > 32) showAlert("🔥 High Temperature!", "danger");
+  else if(humidity > 70) showAlert("💧 High Humidity!", "warning");
+  else if(light < 100) showAlert("🌑 Low Light!", "warning");
+  else if(pressure < 995) showAlert("⚠️ Low Pressure!", "warning");
+  else showAlert("✅ Normal Conditions", "safe");
+}
+</script>
+
+</body>
+</html>
